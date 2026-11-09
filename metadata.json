@@ -1,0 +1,6 @@
+{
+  "name": "BMA Books",
+  "description": "Plataforma de Livros Didácticos e Exercícios com QR Codes Permanentes - Bantu Mentor Academy",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
