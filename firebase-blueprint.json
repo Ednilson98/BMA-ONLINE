@@ -1,0 +1,159 @@
+{
+  "entities": {
+    "Admin": {
+      "title": "Admin",
+      "description": "Registered school administrator or teacher with managerial rights in BMA Books.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Administrator email address."
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Full name of the teacher/administrator."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "superadmin"],
+          "description": "Access level role."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp."
+        }
+      },
+      "required": ["email", "role"]
+    },
+    "Book": {
+      "title": "Book",
+      "description": "Educational textbook metadata in bma-book-v1 format.",
+      "type": "object",
+      "properties": {
+        "book_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "maxLength": 64,
+          "description": "Unique URL slug for the book."
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 160,
+          "description": "Title of the textbook."
+        },
+        "subtitle": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Subtitle or grade description."
+        },
+        "footer": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Footer copyright line (e.g. Bantu Mentor Academy - BMA)."
+        },
+        "author": {
+          "type": "string",
+          "maxLength": 160,
+          "description": "Author or pedagogical department."
+        },
+        "edition": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Edition label."
+        },
+        "format": {
+          "type": "string",
+          "enum": ["bma-book-v1"],
+          "description": "Book specification version."
+        },
+        "totalViews": {
+          "type": "number",
+          "description": "Total cumulative QR scan count."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp."
+        }
+      },
+      "required": ["book_id", "title", "format"]
+    },
+    "Exercise": {
+      "title": "Exercise",
+      "description": "Individual interactive exercise accessible via permanent QR link.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "maxLength": 64,
+          "description": "Unique slug for this exercise within the book."
+        },
+        "book_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "maxLength": 64,
+          "description": "Parent book ID."
+        },
+        "class": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "School class grade."
+        },
+        "unit": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Lesson unit."
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 160,
+          "description": "Exercise title."
+        },
+        "kind": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Exercise type/kind."
+        },
+        "instr": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Pedagogical instruction."
+        },
+        "views": {
+          "type": "number",
+          "description": "Individual view count."
+        }
+      },
+      "required": ["id", "book_id", "title"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": {
+        "$ref": "#/entities/Admin"
+      },
+      "description": "System administrators and authorized teachers."
+    },
+    "/books/{bookId}": {
+      "schema": {
+        "$ref": "#/entities/Book"
+      },
+      "description": "Published school textbooks with permanent URLs."
+    },
+    "/books/{bookId}/exercises/{exerciseId}": {
+      "schema": {
+        "$ref": "#/entities/Exercise"
+      },
+      "description": "Subcollection of exercises for each textbook."
+    }
+  }
+}

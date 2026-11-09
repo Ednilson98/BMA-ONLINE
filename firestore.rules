@@ -1,0 +1,137 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Global Helpers
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-z0-9-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        request.auth.token.email == 'bantudesignstudio9@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Validation helper for Admin documents
+    function isValidAdmin(data) {
+      return data.keys().hasAll(['email', 'role']) &&
+             data.keys().hasOnly(['email', 'role', 'name', 'createdAt']) &&
+             data.email is string && data.email.size() <= 160 &&
+             data.role in ['admin', 'superadmin'];
+    }
+
+    // Validation helper for Book documents
+    function isValidBook(data) {
+      return data.keys().hasAll(['book_id', 'title', 'format']) &&
+             data.keys().hasOnly(['book_id', 'title', 'subtitle', 'footer', 'author', 'edition', 'format', 'totalViews', 'createdAt', 'updatedAt']) &&
+             isValidId(data.book_id) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 160 &&
+             data.format == 'bma-book-v1' &&
+             (!('subtitle' in data) || (data.subtitle is string && data.subtitle.size() <= 255)) &&
+             (!('footer' in data) || (data.footer is string && data.footer.size() <= 255)) &&
+             (!('author' in data) || (data.author is string && data.author.size() <= 160)) &&
+             (!('edition' in data) || (data.edition is string && data.edition.size() <= 60)) &&
+             (!('totalViews' in data) || data.totalViews is number);
+    }
+
+    // Validation helper for Exercise documents
+    function isValidExercise(data) {
+      return data.keys().hasAll(['id', 'book_id', 'title']) &&
+             data.keys().hasOnly(['id', 'book_id', 'title', 'class', 'unit', 'kind', 'instr', 'views']) &&
+             isValidId(data.id) &&
+             isValidId(data.book_id) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 160 &&
+             (!('class' in data) || (data.class is string && data.class.size() <= 60)) &&
+             (!('unit' in data) || (data.unit is string && data.unit.size() <= 60)) &&
+             (!('kind' in data) || (data.kind is string && data.kind.size() <= 60)) &&
+             (!('instr' in data) || (data.instr is string && data.instr.size() <= 500)) &&
+             (!('views' in data) || data.views is number);
+    }
+
+    // Admins Collection
+    match /admins/{adminId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin() && isValidId(adminId) && isValidAdmin(incoming());
+    }
+
+    // Books Collection: Public Read, Admin Write
+    match /books/{bookId} {
+      allow get, list: if true;
+
+      allow create: if isAdmin() &&
+                       isValidId(bookId) &&
+                       incoming().book_id == bookId &&
+                       isValidBook(incoming()) &&
+                       incoming().createdAt == request.time;
+
+      allow update: if (
+        // Action 1: Admin full edit
+        (isAdmin() &&
+         isValidId(bookId) &&
+         isValidBook(incoming()) &&
+         incoming().book_id == existing().book_id &&
+         incoming().createdAt == existing().createdAt &&
+         incoming().updatedAt == request.time) ||
+        // Action 2: Public View Increment
+        (incoming().diff(existing()).affectedKeys().hasOnly(['totalViews']) &&
+         incoming().totalViews is number &&
+         incoming().totalViews == existing().totalViews + 1)
+      );
+
+      allow delete: if isAdmin() && isValidId(bookId);
+
+      // Subcollection: Exercises
+      match /exercises/{exerciseId} {
+        allow get, list: if true;
+
+        allow create: if isAdmin() &&
+                         isValidId(exerciseId) &&
+                         incoming().id == exerciseId &&
+                         incoming().book_id == bookId &&
+                         isValidExercise(incoming()) &&
+                         exists(/databases/$(database)/documents/books/$(bookId));
+
+        allow update: if (
+          // Action 1: Admin edit
+          (isAdmin() &&
+           isValidId(exerciseId) &&
+           isValidExercise(incoming()) &&
+           incoming().id == existing().id &&
+           incoming().book_id == existing().book_id) ||
+          // Action 2: Public View Increment
+          (incoming().diff(existing()).affectedKeys().hasOnly(['views']) &&
+           incoming().views is number &&
+           incoming().views == existing().views + 1)
+        );
+
+        allow delete: if isAdmin() && isValidId(exerciseId);
+      }
+    }
+
+  }
+}
