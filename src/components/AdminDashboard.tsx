@@ -35,6 +35,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onSelectBook }) 
     try {
       const data = await fetchBooks();
       setBooks(data);
+      if (data && data.length > 0) {
+        localStorage.setItem('bma_cached_books', JSON.stringify(data));
+      }
     } catch (err: any) {
       console.error(err);
     } finally {
