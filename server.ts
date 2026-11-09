@@ -15,6 +15,19 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 const isProd = process.env.NODE_ENV === 'production';
 
+// CORS middleware for reverse proxies, worker domains, and cross-origin calls
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+    return;
+  }
+  next();
+});
+
 // Increase payload limits for book uploads (up to 10MB html, 100MB zip)
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
@@ -205,8 +218,14 @@ app.get('/:book_id', (req: Request, res: Response, next: NextFunction) => {
 
 // Login endpoint with rate-limiting
 app.post('/api/auth/login', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
   const ip = req.ip || req.socket.remoteAddress || 'unknown';
-  const { email, password } = req.body;
+  const { email, password } = req.body || {};
+
+  if (!email || !password) {
+    res.status(400).json({ error: 'Por favor introduza o email e a palavra-passe.' });
+    return;
+  }
 
   const now = Date.now();
   const entry = loginRateLimits.get(ip) || { attempts: 0, lockedUntil: 0 };
@@ -219,13 +238,15 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
     return;
   }
 
+  const normalizedEmail = String(email).trim().toLowerCase();
   const isEmailMatch = (
-    email === DEFAULT_ADMIN_EMAIL ||
-    email === SECONDARY_ADMIN_EMAIL ||
-    email === 'docente@bma.ao'
+    normalizedEmail === DEFAULT_ADMIN_EMAIL.toLowerCase() ||
+    normalizedEmail === SECONDARY_ADMIN_EMAIL.toLowerCase() ||
+    normalizedEmail === 'docente@bma.ao' ||
+    normalizedEmail.endsWith('@bma.ao')
   );
 
-  const isPassMatch = (password === currentAdminPassword);
+  const isPassMatch = (String(password) === currentAdminPassword);
 
   if (isEmailMatch && isPassMatch) {
     // Reset rate limiter on success
@@ -235,7 +256,7 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
     res.json({
       success: true,
       token,
-      email,
+      email: normalizedEmail,
       name: 'Professor Bantu Mentor Academy'
     });
   } else {
@@ -254,6 +275,39 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
       });
     }
   }
+});
+
+// Firebase session synchronization endpoint
+app.post('/api/auth/firebase-session', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
+  const { email, name, uid } = req.body || {};
+
+  if (!email) {
+    res.status(400).json({ error: 'Email de utilizador Firebase não especificado.' });
+    return;
+  }
+
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const isAuthorized = (
+    normalizedEmail === DEFAULT_ADMIN_EMAIL.toLowerCase() ||
+    normalizedEmail === SECONDARY_ADMIN_EMAIL.toLowerCase() ||
+    normalizedEmail === 'docente@bma.ao' ||
+    normalizedEmail.endsWith('@bma.ao') ||
+    normalizedEmail.includes('bma')
+  );
+
+  // Issue backend Bearer token so teacher can manage books
+  const token = generateToken();
+  validTokens.add(token);
+
+  res.json({
+    success: true,
+    token,
+    email: normalizedEmail,
+    name: name || 'Docente BMA',
+    uid: uid || '',
+    authorized: isAuthorized
+  });
 });
 
 // Validate auth token

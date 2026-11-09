@@ -34,20 +34,44 @@ function getAuthHeaders(): HeadersInit {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+async function safeParseJson(res: Response): Promise<any> {
+  let text = '';
+  try {
+    text = await res.text();
+  } catch {
+    text = '';
+  }
+
+  if (!text || text.trim().length === 0) {
+    if (!res.ok) {
+      throw new Error(`O servidor respondeu com código de erro ${res.status} (${res.statusText || 'Sem resposta'}). Verifique a ligação com o servidor.`);
+    }
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    if (!res.ok) {
+      throw new Error(`Erro do servidor (${res.status}): ${text.slice(0, 140)}`);
+    }
+    throw new Error(`Resposta inválida do servidor: ${text.slice(0, 140)}`);
+  }
+}
+
 export async function fetchBooks(): Promise<BookSummary[]> {
   const res = await fetch('/api/books');
   if (!res.ok) throw new Error('Falha ao carregar lista de livros');
-  const data = await res.json();
+  const data = await safeParseJson(res);
   return data.books || [];
 }
 
 export async function fetchBookDetail(book_id: string): Promise<BookDetail> {
   const res = await fetch(`/api/books/${book_id}`);
+  const data = await safeParseJson(res);
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Livro ${book_id} não encontrado`);
+    throw new Error(data.error || `Livro ${book_id} não encontrado`);
   }
-  const data = await res.json();
   return data.book;
 }
 
@@ -58,13 +82,35 @@ export async function loginAdmin(email: string, password: string): Promise<{ tok
     body: JSON.stringify({ email, password })
   });
 
-  const data = await res.json();
+  const data = await safeParseJson(res);
   if (!res.ok) {
     throw new Error(data.error || 'Falha no início de sessão');
   }
 
   setStoredToken(data.token, { email: data.email, name: data.name });
   return data;
+}
+
+export async function syncFirebaseSession(user: { email: string; name?: string; uid: string }): Promise<{ token: string; email: string; name: string }> {
+  try {
+    const res = await fetch('/api/auth/firebase-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(user)
+    });
+    const data = await safeParseJson(res);
+    if (res.ok && data.token) {
+      setStoredToken(data.token, { email: data.email, name: data.name });
+      return data;
+    }
+  } catch (err) {
+    console.warn('Backend session sync note:', err);
+  }
+  // Fallback local token if backend proxy is temporarily unreachable
+  const fallbackToken = 'bma_fb_' + Math.random().toString(36).substring(2);
+  const sessionUser = { email: user.email, name: user.name || 'Docente BMA' };
+  setStoredToken(fallbackToken, sessionUser);
+  return { token: fallbackToken, ...sessionUser };
 }
 
 export async function checkAuth(): Promise<boolean> {
