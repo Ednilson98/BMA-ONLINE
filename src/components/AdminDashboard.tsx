@@ -4,7 +4,6 @@ import {
   Plus,
   Download,
   Globe,
-  RotateCcw,
   Eye,
   ExternalLink,
   QrCode,
@@ -13,7 +12,7 @@ import {
   Sparkles,
   Layers
 } from 'lucide-react';
-import { fetchBooks, resetSampleBook } from '../api.js';
+import { fetchBooks } from '../api.js';
 import { BookSummary } from '../types.js';
 import { UploadModal } from './UploadModal.js';
 import { DomainSettingsModal } from './DomainSettingsModal.js';
@@ -27,7 +26,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onSelectBook }) 
   const [loading, setLoading] = useState(true);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isDomainOpen, setIsDomainOpen] = useState(false);
-  const [resettingSample, setResettingSample] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const loadBooks = async () => {
@@ -37,6 +35,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onSelectBook }) 
       setBooks(data);
       if (data && data.length > 0) {
         localStorage.setItem('bma_cached_books', JSON.stringify(data));
+      } else {
+        localStorage.removeItem('bma_cached_books');
       }
     } catch (err: any) {
       console.error(err);
@@ -51,23 +51,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onSelectBook }) 
 
   const totalExercises = books.reduce((acc, b) => acc + b.activeExerciseCount, 0);
   const totalViews = books.reduce((acc, b) => acc + (b.totalViews || 0), 0);
-
-  const handleResetSample = async () => {
-    if (!confirm('Deseja reinicializar o livro modelo oficial "ingles-7-8" com os 17 exercícios de teste?')) {
-      return;
-    }
-    setResettingSample(true);
-    try {
-      await resetSampleBook();
-      await loadBooks();
-      setMessage('Livro modelo "ingles-7-8" reinicializado com sucesso com 17 exercícios.');
-      setTimeout(() => setMessage(null), 3500);
-    } catch (err: any) {
-      alert(err.message || 'Erro ao reiniciar livro');
-    } finally {
-      setResettingSample(false);
-    }
-  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
@@ -89,16 +72,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onSelectBook }) 
 
         {/* Global Action Buttons */}
         <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
-          {/* Download Official Sample HTML */}
+          {/* Download Official Template HTML */}
           <a
             href="/api/sample-book/download"
             className="neu-btn px-3.5 sm:px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white flex items-center gap-2"
-            download="ingles-7-8.html"
-            title="Descarregar ficheiro .html modelo com 17 exercícios para testar re-envio e divisão"
+            download="modelo-manual-bma.html"
+            title="Descarregar ficheiro .html modelo de referência (formato bma-book-v1)"
           >
             <Download className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            <span className="hidden sm:inline">Baixar Livro Modelo (.html)</span>
-            <span className="sm:hidden">Modelo (.html)</span>
+            <span className="hidden sm:inline">Baixar Modelo (.html)</span>
+            <span className="sm:hidden">Modelo</span>
           </a>
 
           {/* Domain configuration */}
@@ -178,17 +161,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onSelectBook }) 
               {books.length}
             </span>
           </h2>
-
-          <button
-            onClick={handleResetSample}
-            disabled={resettingSample}
-            className="text-xs text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-300 flex items-center gap-1 transition-colors"
-            title="Repor livro de demonstração oficial com 17 exercícios"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Repor Amostra (17 exercícios)</span>
-            <span className="sm:hidden">Repor Amostra</span>
-          </button>
         </div>
 
         {loading ? (
@@ -197,17 +169,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onSelectBook }) 
           </div>
         ) : books.length === 0 ? (
           <div className="neu-card p-10 sm:p-14 text-center space-y-4">
-            <BookOpen className="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto" />
-            <div className="text-slate-900 dark:text-white font-bold text-lg">Nenhum livro publicado ainda</div>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-              Envie um ficheiro HTML no formato <code>bma-book-v1</code> ou carregue o livro modelo de exemplo.
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-600 dark:text-amber-400 shadow-md">
+              <BookOpen className="w-8 h-8" />
+            </div>
+            <div className="text-slate-900 dark:text-white font-black text-xl">Ainda não tem manuais publicados</div>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+              Carregue o seu primeiro ficheiro HTML (formato <code>bma-book-v1</code>). O sistema irá dividi-lo automaticamente em links e códigos QR permanentes para impressão nos livros dos alunos.
             </p>
             <button
               onClick={() => setIsUploadOpen(true)}
-              className="btn-gold px-6 py-3 rounded-xl text-xs font-extrabold inline-flex items-center gap-2 cursor-pointer"
+              className="btn-gold px-6 py-3.5 rounded-xl text-xs sm:text-sm font-extrabold inline-flex items-center gap-2 shadow-lg cursor-pointer"
             >
               <Plus className="w-4 h-4 text-slate-900" />
-              <span>Publicar Primeiro Livro</span>
+              <span>Publicar Primeiro Manual</span>
             </button>
           </div>
         ) : (

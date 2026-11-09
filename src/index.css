@@ -2,85 +2,118 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ========================================================
-   SKEUOMORPHIC & NEUOMORPHIC DESIGN SYSTEM - BMA BOOKS
-   Colours: Dark Ocean Blue (#0B1B2B) & Deep Teal (#0D9488) with Rich Gold (#F59E0B)
-   Dual-Theme Engine (Light & Dark)
+   OFFICIAL BMA PALETTE (Harmonious Academic & Editorial)
+   1. #083C51 — Deep Ocean Prussian Navy (Primary dark canvas & card base, primary light text)
+   2. #A28F6A — Warm Antique Gold / Ochre Khaki (Primary skeuomorphic buttons & accents)
+   3. #3F7D8C — Muted Slate Teal / Caribbean Cyan (Secondary buttons & interactive chips)
+   4. #E5E2DD — Warm Alabaster Stone / Linen (Light canvas & primary dark text)
    ======================================================== */
 
-:root {
-  /* LIGHT MODE (Default canvas) */
-  --bma-bg: #EAF0F6;
-  --bma-surface: #FFFFFF;
-  --bma-surface-hover: #F8FAFC;
-  --bma-card: #FFFFFF;
-  --bma-inset: #E2E8F0;
-  --bma-border: rgba(148, 163, 184, 0.28);
-  --bma-border-subtle: rgba(148, 163, 184, 0.18);
-  
-  --bma-text-primary: #0F172A;
-  --bma-text-secondary: #334155;
-  --bma-text-muted: #64748B;
-  
-  --bma-ocean: #0B1B2B;
-  --bma-ocean-light: #1E293B;
-  
-  --bma-teal: #0D9488;
-  --bma-teal-hover: #0F766E;
-  --bma-teal-light: #CCFBF1;
-  --bma-teal-text: #0F766E;
+@theme {
+  --color-bma-navy: #083C51;
+  --color-bma-gold: #A28F6A;
+  --color-bma-teal: #3F7D8C;
+  --color-bma-stone: #E5E2DD;
 
-  --bma-gold: #D97706;
-  --bma-gold-hover: #B45309;
-  --bma-gold-light: #FEF3C7;
-  --bma-gold-text: #92400E;
+  /* Harmonized Amber/Gold spectrum using #A28F6A */
+  --color-amber-50: #FAF8F5;
+  --color-amber-100: #F3EFE7;
+  --color-amber-200: #E6DDCF;
+  --color-amber-300: #D4C4AE;
+  --color-amber-400: #BAA686;
+  --color-amber-500: #A28F6A;
+  --color-amber-600: #8C7A56;
+  --color-amber-700: #6F6042;
+  --color-amber-800: #554932;
+  --color-amber-900: #3C3322;
+  --color-amber-950: #231E14;
+
+  /* Harmonized Teal spectrum using #3F7D8C */
+  --color-teal-50: #F2F7F8;
+  --color-teal-100: #E0EFF2;
+  --color-teal-200: #C2DFE5;
+  --color-teal-300: #9AC7D2;
+  --color-teal-400: #6CAABC;
+  --color-teal-500: #3F7D8C;
+  --color-teal-600: #336774;
+  --color-teal-700: #2B545F;
+  --color-teal-800: #26464F;
+  --color-teal-900: #223B43;
+  --color-teal-950: #083C51;
+}
+
+:root {
+  /* LIGHT MODE (Soft Alabaster Stone #E5E2DD + Deep Prussian #083C51) */
+  --bma-bg: #E5E2DD;
+  --bma-surface: #EDEAE5;
+  --bma-surface-hover: #F4F1EC;
+  --bma-card: #EDEAE5;
+  --bma-inset: #DCD8D1;
+  --bma-border: rgba(8, 60, 81, 0.16);
+  --bma-border-subtle: rgba(8, 60, 81, 0.08);
+  
+  --bma-text-primary: #083C51;
+  --bma-text-secondary: #2C5060;
+  --bma-text-muted: #5C7480;
+  
+  --bma-navy: #083C51;
+  
+  --bma-teal: #3F7D8C;
+  --bma-teal-hover: #336774;
+  --bma-teal-light: rgba(63, 125, 140, 0.15);
+  --bma-teal-text: #2B545F;
+
+  --bma-gold: #A28F6A;
+  --bma-gold-hover: #8C7A56;
+  --bma-gold-light: rgba(162, 143, 106, 0.15);
+  --bma-gold-text: #6F6042;
 
   /* Neuomorphic Shadows - Light */
-  --neu-shadow-card: 10px 10px 24px rgba(166, 180, 200, 0.45), -8px -8px 20px rgba(255, 255, 255, 0.95);
-  --neu-shadow-card-hover: 14px 14px 30px rgba(166, 180, 200, 0.55), -10px -10px 24px rgba(255, 255, 255, 1);
-  --neu-shadow-btn: 5px 5px 12px rgba(166, 180, 200, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.9);
-  --neu-shadow-inset: inset 3px 3px 6px rgba(166, 180, 200, 0.5), inset -2px -2px 5px rgba(255, 255, 255, 0.9);
-  --neu-shadow-pressed: inset 3px 3px 6px rgba(148, 163, 184, 0.6), inset -2px -2px 4px rgba(255, 255, 255, 0.85);
+  --neu-shadow-card: 8px 8px 20px rgba(8, 60, 81, 0.08), -6px -6px 16px rgba(255, 255, 255, 0.85);
+  --neu-shadow-card-hover: 12px 12px 24px rgba(8, 60, 81, 0.12), -8px -8px 20px rgba(255, 255, 255, 0.95);
+  --neu-shadow-btn: 4px 4px 10px rgba(8, 60, 81, 0.09), -3px -3px 8px rgba(255, 255, 255, 0.8);
+  --neu-shadow-inset: inset 2px 2px 5px rgba(8, 60, 81, 0.12), inset -2px -2px 5px rgba(255, 255, 255, 0.7);
+  --neu-shadow-pressed: inset 3px 3px 6px rgba(8, 60, 81, 0.18), inset -1px -1px 3px rgba(255, 255, 255, 0.6);
 
   /* Skeuomorphic Glass & Bevels - Light */
-  --bevel-light: inset 0 1px 1px 0 rgba(255, 255, 255, 0.9), 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --bevel-light: inset 0 1px 1px 0 rgba(255, 255, 255, 0.85), 0 1px 2px 0 rgba(8, 60, 81, 0.06);
 }
 
 .dark {
-  /* DARK MODE (Dark Ocean Blue & Night Slate) */
-  --bma-bg: #07121E;
-  --bma-surface: #0E1E30;
-  --bma-surface-hover: #13273E;
-  --bma-card: #102338;
-  --bma-inset: #091522;
-  --bma-border: rgba(255, 255, 255, 0.08);
-  --bma-border-subtle: rgba(255, 255, 255, 0.04);
+  /* DARK MODE (Deep Ocean #052431 canvas + #083C51 cards + #E5E2DD alabaster text) */
+  --bma-bg: #052431;
+  --bma-surface: #083C51;
+  --bma-surface-hover: #0D4860;
+  --bma-card: #083C51;
+  --bma-inset: #041A24;
+  --bma-border: rgba(229, 226, 221, 0.14);
+  --bma-border-subtle: rgba(229, 226, 221, 0.07);
   
-  --bma-text-primary: #F8FAFC;
-  --bma-text-secondary: #CBD5E1;
-  --bma-text-muted: #94A3B8;
+  --bma-text-primary: #E5E2DD;
+  --bma-text-secondary: #BDCCD3;
+  --bma-text-muted: #869DA7;
 
-  --bma-ocean: #0B1B2B;
-  --bma-ocean-light: #16283E;
+  --bma-navy: #083C51;
   
-  --bma-teal: #14B8A6;
-  --bma-teal-hover: #0D9488;
-  --bma-teal-light: rgba(20, 184, 166, 0.15);
-  --bma-teal-text: #5EEAD4;
+  --bma-teal: #3F7D8C;
+  --bma-teal-hover: #5298A8;
+  --bma-teal-light: rgba(63, 125, 140, 0.22);
+  --bma-teal-text: #9AC7D2;
 
-  --bma-gold: #F59E0B;
-  --bma-gold-hover: #D97706;
-  --bma-gold-light: rgba(245, 158, 11, 0.15);
-  --bma-gold-text: #FDE68A;
+  --bma-gold: #A28F6A;
+  --bma-gold-hover: #B8A682;
+  --bma-gold-light: rgba(162, 143, 106, 0.2);
+  --bma-gold-text: #D4C4AE;
 
   /* Neuomorphic Shadows - Dark */
-  --neu-shadow-card: 10px 10px 24px rgba(0, 0, 0, 0.55), -6px -6px 18px rgba(255, 255, 255, 0.03);
-  --neu-shadow-card-hover: 14px 14px 32px rgba(0, 0, 0, 0.65), -8px -8px 22px rgba(255, 255, 255, 0.05);
-  --neu-shadow-btn: 5px 5px 12px rgba(0, 0, 0, 0.45), -3px -3px 8px rgba(255, 255, 255, 0.03);
-  --neu-shadow-inset: inset 3px 3px 7px rgba(0, 0, 0, 0.6), inset -2px -2px 5px rgba(255, 255, 255, 0.04);
-  --neu-shadow-pressed: inset 3px 3px 6px rgba(0, 0, 0, 0.75), inset -1px -1px 3px rgba(255, 255, 255, 0.03);
+  --neu-shadow-card: 10px 10px 24px rgba(2, 14, 20, 0.65), -5px -5px 16px rgba(229, 226, 221, 0.03);
+  --neu-shadow-card-hover: 14px 14px 30px rgba(2, 14, 20, 0.75), -7px -7px 20px rgba(229, 226, 221, 0.05);
+  --neu-shadow-btn: 4px 4px 10px rgba(2, 14, 20, 0.5), -2px -2px 6px rgba(229, 226, 221, 0.03);
+  --neu-shadow-inset: inset 3px 3px 7px rgba(2, 14, 20, 0.7), inset -2px -2px 5px rgba(229, 226, 221, 0.04);
+  --neu-shadow-pressed: inset 3px 3px 6px rgba(2, 14, 20, 0.85), inset -1px -1px 3px rgba(229, 226, 221, 0.03);
 
   /* Skeuomorphic Glass & Bevels - Dark */
-  --bevel-light: inset 0 1px 1px 0 rgba(255, 255, 255, 0.12), 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  --bevel-light: inset 0 1px 1px 0 rgba(229, 226, 221, 0.12), 0 1px 3px 0 rgba(0, 0, 0, 0.4);
 }
 
 body {
@@ -108,7 +141,7 @@ body {
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .neu-card:hover {
-  border-color: rgba(20, 184, 166, 0.35);
+  border-color: rgba(63, 125, 140, 0.4);
 }
 
 /* Neuomorphic Inset Well (Inputs, Search, Filter Displays, Code Wells) */
@@ -138,21 +171,21 @@ body {
 }
 .neu-btn:hover {
   background-color: var(--bma-surface-hover);
-  border-color: rgba(20, 184, 166, 0.4);
+  border-color: rgba(63, 125, 140, 0.45);
 }
 .neu-btn:active {
   box-shadow: var(--neu-shadow-pressed);
   transform: translateY(1.5px);
 }
 
-/* Polished Skeuomorphic Gold Button (Primary Call To Action) */
+/* Polished Skeuomorphic Gold Button (Refined Antique Camel Brass #A28F6A) */
 .btn-gold {
-  background: linear-gradient(180deg, #FCD34D 0%, #F59E0B 45%, #D97706 100%);
-  color: #07121E !important;
+  background: linear-gradient(180deg, #B5A37F 0%, #A28F6A 50%, #8E7B57 100%);
+  color: #052431 !important;
   font-weight: 800;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.38), inset 0 1px 1px 0 rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 14px rgba(162, 143, 106, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.65);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -165,23 +198,23 @@ body {
 }
 .btn-gold:hover {
   filter: brightness(1.06);
-  box-shadow: 0 6px 18px rgba(217, 119, 6, 0.48), inset 0 1px 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: 0 6px 18px rgba(162, 143, 106, 0.45), inset 0 1px 1px 0 rgba(255, 255, 255, 0.8);
   transform: translateY(-1px);
 }
 .btn-gold:active {
   transform: translateY(1.5px);
-  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.4), inset 0 2px 4px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 6px rgba(162, 143, 106, 0.35), inset 0 2px 4px rgba(0, 0, 0, 0.25);
   filter: brightness(0.96);
 }
 
-/* Polished Skeuomorphic Teal Button (Secondary Primary Action) */
+/* Polished Skeuomorphic Slate Teal Button (#3F7D8C) */
 .btn-teal {
-  background: linear-gradient(180deg, #2DD4BF 0%, #14B8A6 45%, #0D9488 100%);
+  background: linear-gradient(180deg, #4F8E9D 0%, #3F7D8C 50%, #306B79 100%);
   color: #FFFFFF !important;
   font-weight: 800;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.38), inset 0 1px 1px 0 rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 14px rgba(63, 125, 140, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.45);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -194,12 +227,12 @@ body {
 }
 .btn-teal:hover {
   filter: brightness(1.06);
-  box-shadow: 0 6px 18px rgba(13, 148, 136, 0.48), inset 0 1px 1px 0 rgba(255, 255, 255, 0.6);
+  box-shadow: 0 6px 18px rgba(63, 125, 140, 0.45), inset 0 1px 1px 0 rgba(255, 255, 255, 0.6);
   transform: translateY(-1px);
 }
 .btn-teal:active {
   transform: translateY(1.5px);
-  box-shadow: 0 2px 6px rgba(13, 148, 136, 0.4), inset 0 2px 4px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 6px rgba(63, 125, 140, 0.35), inset 0 2px 4px rgba(0, 0, 0, 0.25);
   filter: brightness(0.96);
 }
 

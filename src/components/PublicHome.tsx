@@ -145,11 +145,11 @@ export const PublicHome: React.FC<PublicHomeProps> = ({ onGoToAdmin }) => {
             </div>
           )}
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-4 mt-3 text-[11px] text-slate-500 dark:text-slate-400 pl-1">
-            <span>Experimente o código <code>u71-l1</code></span>
+            <span>Digite o código de exercício impresso na página do seu manual</span>
             <span>•</span>
             <span className="text-teal-600 dark:text-teal-400 font-medium flex items-center gap-1">
               <Smartphone className="w-3.5 h-3.5" />
-              Directo no telemóvel
+              Acesso directo no telemóvel
             </span>
           </div>
         </div>
@@ -159,8 +159,37 @@ export const PublicHome: React.FC<PublicHomeProps> = ({ onGoToAdmin }) => {
       {/* Main Content Area */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
         
+        {/* Loading State */}
+        {loading && (
+          <div className="neu-card p-12 text-center text-slate-500 dark:text-slate-400">
+            A carregar manuais escolares...
+          </div>
+        )}
+
+        {/* Empty State when no books have been uploaded yet */}
+        {!loading && books.length === 0 && (
+          <div className="neu-card p-10 sm:p-14 text-center max-w-xl mx-auto space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-600 dark:text-amber-400 shadow-md">
+              <BookOpen className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 dark:text-white">
+              Nenhum manual didáctico publicado ainda
+            </h3>
+            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              Os manuais escolares e exercícios interactivos publicados pelo docente da Bantu Mentor Academy aparecerão aqui com os seus respectivos códigos QR.
+            </p>
+            <button
+              onClick={onGoToAdmin}
+              className="btn-gold px-6 py-3.5 rounded-xl text-xs sm:text-sm font-extrabold inline-flex items-center gap-2 cursor-pointer shadow-lg"
+            >
+              <span>Aceder à Área do Professor</span>
+              <ArrowRight className="w-4 h-4 text-slate-900" />
+            </button>
+          </div>
+        )}
+
         {/* Book Selector Tabs (if multiple books exist) */}
-        {books.length > 0 && (
+        {!loading && books.length > 0 && (
           <div className="space-y-3">
             <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
               <BookOpen className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />

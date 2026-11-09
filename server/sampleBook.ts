@@ -364,39 +364,39 @@ export function buildSampleBookHtml(): string {
   <meta name="description" content="Exercícios escolares interactivos de Língua Inglesa - Bantu Mentor Academy">
   <style>
     :root {
-      --bg-main: #0B1B2B;
-      --bg-card: #132438;
-      --bg-inset: #091522;
-      --teal-main: #0D9488;
-      --teal-light: #14B8A6;
-      --gold-main: #F59E0B;
-      --gold-glow: #FBBF24;
-      --text-main: #F8FAFC;
-      --text-muted: #94A3B8;
-      --border-subtle: rgba(255, 255, 255, 0.08);
+      --bg-main: #052431;
+      --bg-card: #083C51;
+      --bg-inset: #041A24;
+      --teal-main: #3F7D8C;
+      --teal-light: #5298A8;
+      --gold-main: #A28F6A;
+      --gold-glow: #B8A682;
+      --text-main: #E5E2DD;
+      --text-muted: #8FA5AF;
+      --border-subtle: rgba(229, 226, 221, 0.14);
       --success: #10B981;
       --error: #EF4444;
-      --shadow-out: 8px 8px 18px rgba(0, 0, 0, 0.45), -6px -6px 14px rgba(255, 255, 255, 0.04);
-      --shadow-inset: inset 3px 3px 6px rgba(0, 0, 0, 0.5), inset -2px -2px 5px rgba(255, 255, 255, 0.05);
-      --shadow-btn: 4px 4px 10px rgba(0, 0, 0, 0.4), -3px -3px 8px rgba(255, 255, 255, 0.05);
+      --shadow-out: 8px 8px 18px rgba(0, 0, 0, 0.55), -6px -6px 14px rgba(229, 226, 221, 0.04);
+      --shadow-inset: inset 3px 3px 6px rgba(0, 0, 0, 0.6), inset -2px -2px 5px rgba(229, 226, 221, 0.04);
+      --shadow-btn: 4px 4px 10px rgba(0, 0, 0, 0.45), -3px -3px 8px rgba(229, 226, 221, 0.03);
       --radius: 20px;
     }
 
     @media (prefers-color-scheme: light) {
       :root {
-        --bg-main: #EAF0F6;
-        --bg-card: #FFFFFF;
-        --bg-inset: #E2E8F0;
-        --teal-main: #0D9488;
-        --teal-light: #0F766E;
-        --gold-main: #D97706;
-        --gold-glow: #B45309;
-        --text-main: #0F172A;
-        --text-muted: #475569;
-        --border-subtle: rgba(148, 163, 184, 0.25);
-        --shadow-out: 10px 10px 22px rgba(166, 180, 200, 0.45), -8px -8px 18px rgba(255, 255, 255, 0.95);
-        --shadow-inset: inset 3px 3px 6px rgba(166, 180, 200, 0.5), inset -2px -2px 5px rgba(255, 255, 255, 0.9);
-        --shadow-btn: 4px 4px 10px rgba(166, 180, 200, 0.4), -3px -3px 8px rgba(255, 255, 255, 0.9);
+        --bg-main: #E5E2DD;
+        --bg-card: #EDEAE5;
+        --bg-inset: #DCD8D1;
+        --teal-main: #3F7D8C;
+        --teal-light: #2E6471;
+        --gold-main: #A28F6A;
+        --gold-glow: #8B7853;
+        --text-main: #083C51;
+        --text-muted: #385E6E;
+        --border-subtle: rgba(8, 60, 81, 0.16);
+        --shadow-out: 8px 8px 20px rgba(8, 60, 81, 0.08), -6px -6px 16px rgba(255, 255, 255, 0.85);
+        --shadow-inset: inset 2px 2px 5px rgba(8, 60, 81, 0.12), inset -2px -2px 5px rgba(255, 255, 255, 0.7);
+        --shadow-btn: 4px 4px 10px rgba(8, 60, 81, 0.09), -3px -3px 8px rgba(255, 255, 255, 0.8);
       }
     }
 
@@ -512,14 +512,14 @@ export function buildSampleBookHtml(): string {
       width: 48px;
       height: 48px;
       border-radius: 50%;
-      background: linear-gradient(135deg, var(--teal-main), #0f766e);
+      background: linear-gradient(135deg, var(--teal-main), #336774);
       color: #FFFFFF;
       border: none;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(13, 148, 136, 0.4);
+      box-shadow: 0 4px 12px rgba(63, 125, 140, 0.4);
       transition: all 0.2s ease;
     }
 
@@ -668,10 +668,10 @@ export function buildSampleBookHtml(): string {
     .btn-primary {
       flex: 1;
       height: 52px;
-      background: linear-gradient(135deg, #F59E0B, #D97706);
-      border: none;
+      background: linear-gradient(135deg, #B5A37F, #A28F6A);
+      border: 1px solid rgba(255, 255, 255, 0.35);
       border-radius: 14px;
-      color: #0B1B2B;
+      color: #052431;
       font-size: 16px;
       font-weight: 800;
       cursor: pointer;
@@ -679,7 +679,7 @@ export function buildSampleBookHtml(): string {
       align-items: center;
       justify-content: center;
       gap: 8px;
-      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);
+      box-shadow: 0 4px 14px rgba(162, 143, 106, 0.4);
       transition: all 0.2s ease;
       touch-action: manipulation;
     }

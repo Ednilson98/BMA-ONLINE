@@ -109,17 +109,17 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, book 
         <style>
           @page { size: A4 portrait; margin: 15mm; }
           body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #111; margin: 0; padding: 0; }
-          .header { text-align: center; border-bottom: 2px solid #0D9488; padding-bottom: 12px; margin-bottom: 20px; }
-          .logo { font-size: 14px; font-weight: 800; color: #D97706; text-transform: uppercase; letter-spacing: 1px; }
-          h1 { margin: 6px 0 2px; font-size: 20px; color: #0B1B2B; }
+          .header { text-align: center; border-bottom: 2px solid #3F7D8C; padding-bottom: 12px; margin-bottom: 20px; }
+          .logo { font-size: 14px; font-weight: 800; color: #A28F6A; text-transform: uppercase; letter-spacing: 1px; }
+          h1 { margin: 6px 0 2px; font-size: 20px; color: #083C51; }
           .subtitle { font-size: 12px; color: #555; }
           .meta-info { margin-top: 6px; font-size: 11px; color: #444; }
           table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 10pt; }
-          th { background: #F1F5F9; color: #0B1B2B; border: 1px solid #CBD5E1; padding: 8px 10px; text-align: left; font-weight: 700; }
+          th { background: #E5E2DD; color: #083C51; border: 1px solid #CBD5E1; padding: 8px 10px; text-align: left; font-weight: 700; }
           td { border: 1px solid #CBD5E1; padding: 7px 10px; vertical-align: middle; }
           tr:nth-child(even) { background: #F8FAFC; }
-          .id-cell { font-family: monospace; font-weight: bold; color: #0D9488; }
-          .url-cell { font-family: monospace; font-size: 8.5pt; color: #1E293B; word-break: break-all; }
+          .id-cell { font-family: monospace; font-weight: bold; color: #3F7D8C; }
+          .url-cell { font-family: monospace; font-size: 8.5pt; color: #083C51; word-break: break-all; }
           .footer { margin-top: 25px; text-align: center; font-size: 10px; color: #777; border-top: 1px solid #E2E8F0; padding-top: 10px; }
         </style>
       </head>

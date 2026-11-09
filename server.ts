@@ -239,13 +239,7 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
   }
 
   const normalizedEmail = String(email).trim().toLowerCase();
-  const isEmailMatch = (
-    normalizedEmail === DEFAULT_ADMIN_EMAIL.toLowerCase() ||
-    normalizedEmail === SECONDARY_ADMIN_EMAIL.toLowerCase() ||
-    normalizedEmail === 'docente@bma.ao' ||
-    normalizedEmail.endsWith('@bma.ao')
-  );
-
+  const isEmailMatch = (normalizedEmail === DEFAULT_ADMIN_EMAIL.toLowerCase());
   const isPassMatch = (String(password) === currentAdminPassword);
 
   if (isEmailMatch && isPassMatch) {
@@ -277,7 +271,7 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
   }
 });
 
-// Firebase session synchronization endpoint
+// Firebase session synchronization endpoint (STRICT: bantudesignstudio9@gmail.com only)
 app.post('/api/auth/firebase-session', (req: Request, res: Response) => {
   res.setHeader('Content-Type', 'application/json');
   const { email, name, uid } = req.body || {};
@@ -288,13 +282,12 @@ app.post('/api/auth/firebase-session', (req: Request, res: Response) => {
   }
 
   const normalizedEmail = String(email).trim().toLowerCase();
-  const isAuthorized = (
-    normalizedEmail === DEFAULT_ADMIN_EMAIL.toLowerCase() ||
-    normalizedEmail === SECONDARY_ADMIN_EMAIL.toLowerCase() ||
-    normalizedEmail === 'docente@bma.ao' ||
-    normalizedEmail.endsWith('@bma.ao') ||
-    normalizedEmail.includes('bma')
-  );
+  if (normalizedEmail !== DEFAULT_ADMIN_EMAIL.toLowerCase()) {
+    res.status(403).json({
+      error: `Acesso não autorizado para o email ${email}. Apenas o email oficial bantudesignstudio9@gmail.com tem permissão de administração.`
+    });
+    return;
+  }
 
   // Issue backend Bearer token so teacher can manage books
   const token = generateToken();
@@ -304,9 +297,9 @@ app.post('/api/auth/firebase-session', (req: Request, res: Response) => {
     success: true,
     token,
     email: normalizedEmail,
-    name: name || 'Docente BMA',
+    name: name || 'Professor Bantu Mentor Academy',
     uid: uid || '',
-    authorized: isAuthorized
+    authorized: true
   });
 });
 
@@ -568,19 +561,12 @@ app.get('/api/books/:book_id/download-original', (req: Request, res: Response) =
   res.send(html);
 });
 
-// Download sample book HTML file
+// Download official template HTML file for teachers
 app.get('/api/sample-book/download', (req: Request, res: Response) => {
   const sampleHtml = buildSampleBookHtml();
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Content-Disposition', 'attachment; filename="ingles-7-8.html"');
+  res.setHeader('Content-Disposition', 'attachment; filename="modelo-manual-bma.html"');
   res.send(sampleHtml);
-});
-
-// Reset sample book (for testing)
-app.post('/api/sample-book/reset', requireAdminAuth, (req: Request, res: Response) => {
-  storage.deleteBook(SAMPLE_BOOK_ID);
-  storage.ensureSampleBook();
-  res.json({ success: true, message: 'Livro de demonstração "ingles-7-8" reinicializado com sucesso.' });
 });
 
 // Custom domain get & set

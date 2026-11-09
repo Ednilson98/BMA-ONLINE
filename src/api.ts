@@ -59,29 +59,12 @@ async function safeParseJson(res: Response): Promise<any> {
   }
 }
 
-// Built-in sample book fallback if running on static Cloudflare Workers without Express backend
-const DEFAULT_SAMPLE_BOOK_SUMMARY: BookSummary = {
-  book_id: 'ingles-7-8',
-  title: 'English Language Practice - 7ª e 8ª Classes',
-  subtitle: 'Manual Interactivo de Exercícios Didácticos',
-  footer: 'Bantu Mentor Academy - BMA',
-  author: 'Equipa Pedagógica BMA',
-  edition: 'Edição Digital 2026',
-  activeExerciseCount: 17,
-  unlistedExerciseCount: 0,
-  versionCount: 1,
-  latestVersion: 1,
-  totalViews: 42,
-  updatedAt: new Date().toISOString(),
-  publicUrl: '/ingles-7-8'
-};
-
 export async function fetchBooks(): Promise<BookSummary[]> {
   try {
     const res = await fetch('/api/books');
     if (res.ok) {
       const data = await safeParseJson(res);
-      if (data?.books && data.books.length > 0) {
+      if (data?.books) {
         return data.books;
       }
     }
@@ -89,16 +72,16 @@ export async function fetchBooks(): Promise<BookSummary[]> {
     console.warn('Backend books API unreachable, checking local cache:', err);
   }
 
-  // Fallback to locally cached books or built-in sample
+  // Fallback to locally cached uploaded books
   try {
     const cached = localStorage.getItem('bma_cached_books');
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch {}
 
-  return [DEFAULT_SAMPLE_BOOK_SUMMARY];
+  return [];
 }
 
 export async function fetchBookDetail(book_id: string): Promise<BookDetail> {
@@ -109,102 +92,59 @@ export async function fetchBookDetail(book_id: string): Promise<BookDetail> {
       if (data?.book) return data.book;
     }
   } catch (err) {
-    console.warn('Backend book detail API unreachable, using local fallback:', err);
+    console.warn('Backend book detail API note:', err);
   }
 
-  // Fallback sample book structure for static hosting
-  return {
-    book_id: 'ingles-7-8',
-    meta: {
-      format: 'bma-book-v1',
-      book_id: 'ingles-7-8',
-      title: 'English Language Practice - 7ª e 8ª Classes',
-      subtitle: 'Manual Interactivo de Exercícios Didácticos',
-      footer: 'Bantu Mentor Academy - BMA',
-      author: 'Equipa Pedagógica BMA',
-      edition: 'Edição Digital 2026'
-    },
-    activeExercises: [
-      { id: 'u71-l1', class: '7ª Classe', unit: 'Unit 7.1', title: 'Greetings and Introductions', kind: 'multiple-choice', instr: 'Select the best greeting.' },
-      { id: 'u71-l2', class: '7ª Classe', unit: 'Unit 7.1', title: 'Classroom Vocabulary', kind: 'drag-drop', instr: 'Identify classroom objects.' },
-      { id: 'u71-l3', class: '7ª Classe', unit: 'Unit 7.1', title: 'Verb To Be: Present Simple', kind: 'fill-blank', instr: 'Complete with am, is, or are.' }
-    ],
-    unlistedExercises: [],
-    versions: [{ version: 1, timestamp: new Date().toISOString(), exerciseCount: 17, note: 'Versão inicial do manual' }],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    totalViews: 42,
-    audioFiles: [],
-    publicUrl: `/${book_id}`
-  };
+  // Check locally cached book details if offline
+  try {
+    const raw = localStorage.getItem(`bma_book_detail_${book_id}`);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+
+  throw new Error(`Manual didáctico "${book_id}" não encontrado.`);
 }
 
 export async function loginAdmin(email: string, password: string): Promise<{ token: string; email: string; name: string }> {
   const normalizedEmail = email.trim().toLowerCase();
-  const isOfficialEmail = (
-    normalizedEmail === 'bantudesignstudio9@gmail.com' ||
-    normalizedEmail === 'admin@bmabooks.ao' ||
-    normalizedEmail === 'docente@bma.ao' ||
-    normalizedEmail.endsWith('@bma.ao')
-  );
-  const isOfficialPass = (password === 'bma-docente-2026');
 
-  // If credentials match the official teacher account, try backend first, but fallback gracefully if static host returns 405/404
-  if (isOfficialEmail && isOfficialPass) {
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: normalizedEmail, password })
-      });
-
-      if (res.ok) {
-        const data = await safeParseJson(res);
-        if (data?.token) {
-          setStoredToken(data.token, { email: data.email, name: data.name });
-          return data;
-        }
-      }
-    } catch (e) {
-      console.warn('Backend login endpoint unavailable, applying direct local authorization:', e);
-    }
-
-    // Direct local authorization (100% immune to 405 Method Not Allowed on Cloudflare Workers)
-    const directToken = 'bma_direct_' + Math.random().toString(36).substring(2);
-    const result = {
-      token: directToken,
-      email: normalizedEmail,
-      name: 'Professor Bantu Mentor Academy'
-    };
-    setStoredToken(directToken, { email: normalizedEmail, name: result.name });
-    return result;
+  // STRICT: Only bantudesignstudio9@gmail.com is authorized
+  if (normalizedEmail !== 'bantudesignstudio9@gmail.com') {
+    throw new Error('Acesso não autorizado. Apenas o email docente oficial (bantudesignstudio9@gmail.com) tem permissão de administração.');
   }
 
-  // Non-matching official credentials: try backend or throw invalid credentials error
+  const isOfficialPass = (password === 'bma-docente-2026');
+  if (!isOfficialPass) {
+    throw new Error('Palavra-passe incorrecta. Verifique os dados de acesso.');
+  }
+
+  // If credentials match, try backend first, but fallback gracefully if static host returns 405/404
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email: normalizedEmail, password })
     });
 
-    if (res.status === 405 || res.status === 404) {
-      throw new Error('Credenciais incorrectas. Verifique o email e a palavra-passe.');
+    if (res.ok) {
+      const data = await safeParseJson(res);
+      if (data?.token) {
+        setStoredToken(data.token, { email: data.email, name: data.name });
+        return data;
+      }
     }
-
-    const data = await safeParseJson(res);
-    if (!res.ok) {
-      throw new Error(data.error || 'Credenciais incorrectas.');
-    }
-
-    setStoredToken(data.token, { email: data.email, name: data.name });
-    return data;
-  } catch (err: any) {
-    if (err.message && !err.message.includes('405')) {
-      throw err;
-    }
-    throw new Error('Credenciais incorrectas. Verifique o email e a palavra-passe.');
+  } catch (e) {
+    console.warn('Backend login endpoint unavailable, applying direct local authorization:', e);
   }
+
+  // Direct local authorization (100% immune to 405 Method Not Allowed on Cloudflare Workers)
+  const directToken = 'bma_direct_' + Math.random().toString(36).substring(2);
+  const result = {
+    token: directToken,
+    email: normalizedEmail,
+    name: 'Professor Bantu Mentor Academy'
+  };
+  setStoredToken(directToken, { email: normalizedEmail, name: result.name });
+  return result;
 }
 
 export async function syncFirebaseSession(user: { email: string; name?: string; uid: string }): Promise<{ token: string; email: string; name: string }> {
@@ -414,14 +354,6 @@ export async function deleteBook(book_id: string): Promise<void> {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.error || 'Falha ao eliminar livro');
   }
-}
-
-export async function resetSampleBook(): Promise<void> {
-  const res = await fetch('/api/sample-book/reset', {
-    method: 'POST',
-    headers: getAuthHeaders()
-  });
-  if (!res.ok) throw new Error('Falha ao reiniciar livro de exemplo');
 }
 
 export async function fetchDomainInfo(): Promise<{ customDomain: string; currentHost: string; effectiveBaseUrl: string }> {

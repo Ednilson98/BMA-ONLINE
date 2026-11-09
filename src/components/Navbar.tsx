@@ -22,7 +22,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   selectedBookTitle
 }) => {
   return (
-    <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-white/85 dark:bg-[#0B1B2B]/90 border-b border-slate-200/80 dark:border-white/10 transition-colors">
+    <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-[var(--bma-surface)]/90 border-b border-[var(--bma-border)] transition-colors">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
         
         {/* Brand / Logo */}
@@ -34,7 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           aria-label="Ir para a página inicial"
         >
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center btn-gold shadow-md shrink-0">
-            <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-slate-900" />
+            <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-[#052431]" />
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5 sm:gap-2">
@@ -53,7 +53,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Center Breadcrumb (if inside a book on desktop) */}
         {selectedBookTitle && currentView === 'book-detail' && (
-          <div className="hidden lg:flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-black/25 px-3.5 py-1.5 rounded-full border border-slate-200 dark:border-white/10 max-w-xs truncate">
+          <div className="hidden lg:flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 bg-[var(--bma-inset)] px-3.5 py-1.5 rounded-full border border-[var(--bma-border)] max-w-xs truncate">
             <span className="text-slate-400 dark:text-slate-500">Livro:</span>
             <span className="font-bold text-amber-600 dark:text-amber-300 truncate">{selectedBookTitle}</span>
           </div>

@@ -5,19 +5,21 @@ import {
   Mail,
   AlertTriangle,
   ArrowRight,
-  KeyRound,
   ExternalLink,
   Copy,
   Check,
   Flame,
   Globe,
-  UserPlus
+  UserPlus,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { loginAdmin, syncFirebaseSession } from '../api.js';
 import {
   signInWithEmail,
   registerWithEmail,
   signInWithGoogle,
+  signOutFirebase,
   parseFirebaseAuthError,
   ParsedAuthError,
   firebaseConfig
@@ -28,10 +30,13 @@ interface AdminLoginProps {
   onCancel: () => void;
 }
 
+const AUTHORIZED_ADMIN_EMAIL = 'bantudesignstudio9@gmail.com';
+
 export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) => {
   const [authMode, setAuthMode] = useState<'firebase' | 'local'>('firebase');
-  const [email, setEmail] = useState('bantudesignstudio9@gmail.com');
-  const [password, setPassword] = useState('bma-docente-2026');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [domainDiagnostic, setDomainDiagnostic] = useState<ParsedAuthError | null>(null);
@@ -54,14 +59,26 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) =
     setError(null);
     setDomainDiagnostic(null);
     setStatusMessage(null);
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail !== AUTHORIZED_ADMIN_EMAIL) {
+      setError(`Acesso restrito. Apenas o email oficial (${AUTHORIZED_ADMIN_EMAIL}) tem permissão de administração.`);
+      return;
+    }
+
+    if (!password) {
+      setError('Por favor introduza a sua palavra-passe.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const user = await signInWithEmail(email, password);
-      setStatusMessage('Autenticação Firebase concluída! A sincronizar sessão...');
+      const user = await signInWithEmail(normalizedEmail, password);
+      setStatusMessage('Autenticação confirmada! A aceder ao painel...');
       const session = await syncFirebaseSession({
-        email: user.email || email,
-        name: user.displayName || 'Docente BMA',
+        email: user.email || normalizedEmail,
+        name: user.displayName || 'Professor Bantu Mentor Academy',
         uid: user.uid
       });
       onSuccess({ email: session.email, name: session.name });
@@ -71,7 +88,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) =
       if (parsed.isUnauthorizedDomain) {
         setDomainDiagnostic(parsed);
       } else if (err?.code === 'auth/user-not-found' || err?.code === 'auth/invalid-credential') {
-        setError('Utilizador não registado no Firebase Authentication ou dados incorrectos.');
+        setError('Credenciais não encontradas no Firebase Authentication ou palavra-passe incorrecta.');
       } else {
         setError(parsed.message || 'Falha ao autenticar via Firebase.');
       }
@@ -80,7 +97,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) =
     }
   };
 
-  // 2. Firebase Google login
+  // 2. Firebase Google login (STRICT: bantudesignstudio9@gmail.com only)
   const handleFirebaseGoogleLogin = async () => {
     setError(null);
     setDomainDiagnostic(null);
@@ -89,10 +106,19 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) =
 
     try {
       const user = await signInWithGoogle();
-      setStatusMessage('Autenticação Google concluída! A sincronizar sessão...');
+      const userEmail = (user.email || '').trim().toLowerCase();
+
+      // STRICT AUTHORIZATION CHECK
+      if (userEmail !== AUTHORIZED_ADMIN_EMAIL) {
+        await signOutFirebase();
+        setError(`Acesso negado para a conta Google "${user.email}". Apenas o email oficial da instituição (${AUTHORIZED_ADMIN_EMAIL}) tem permissão de docente.`);
+        return;
+      }
+
+      setStatusMessage('Conta Google verificada! A aceder ao painel...');
       const session = await syncFirebaseSession({
-        email: user.email || email,
-        name: user.displayName || 'Docente BMA',
+        email: userEmail,
+        name: user.displayName || 'Professor Bantu Mentor Academy',
         uid: user.uid
       });
       onSuccess({ email: session.email, name: session.name });
@@ -109,19 +135,31 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) =
     }
   };
 
-  // 3. Register user directly in Firebase Authentication (convenience helper)
+  // 3. Register user directly in Firebase Authentication
   const handleCreateFirebaseUser = async () => {
     setError(null);
     setDomainDiagnostic(null);
     setStatusMessage(null);
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail !== AUTHORIZED_ADMIN_EMAIL) {
+      setError(`Apenas o email docente oficial (${AUTHORIZED_ADMIN_EMAIL}) pode ser registado como administrador.`);
+      return;
+    }
+
+    if (!password || password.length < 6) {
+      setError('A palavra-passe deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const user = await registerWithEmail(email, password);
-      setStatusMessage('Conta Firebase criada com sucesso! A aceder ao painel...');
+      const user = await registerWithEmail(normalizedEmail, password);
+      setStatusMessage('Conta Firebase criada com sucesso! A aceder...');
       const session = await syncFirebaseSession({
-        email: user.email || email,
-        name: user.displayName || 'Docente BMA',
+        email: user.email || normalizedEmail,
+        name: user.displayName || 'Professor Bantu Mentor Academy',
         uid: user.uid
       });
       onSuccess({ email: session.email, name: session.name });
@@ -137,34 +175,43 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) =
     }
   };
 
-  // 4. Fallback Local BMA Server Login (always works even if domain isn't authorized in Firebase yet)
+  // 4. Local BMA Server Login (direct fallback)
   const handleLocalLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setError(null);
     setStatusMessage(null);
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setError('Por favor introduza o seu email docente.');
+      return;
+    }
+
+    if (normalizedEmail !== AUTHORIZED_ADMIN_EMAIL) {
+      setError(`Acesso restrito. Apenas o email oficial (${AUTHORIZED_ADMIN_EMAIL}) tem permissão de administração.`);
+      return;
+    }
+
+    if (!password) {
+      setError('Por favor introduza a sua palavra-passe.');
+      return;
+    }
+
     setLoading(true);
 
-    const targetEmail = (email && email.trim().length > 0) ? email : 'bantudesignstudio9@gmail.com';
-    const targetPassword = (password && password.length > 0) ? password : 'bma-docente-2026';
-
     try {
-      const res = await loginAdmin(targetEmail, targetPassword);
+      const res = await loginAdmin(normalizedEmail, password);
       onSuccess({ email: res.email, name: res.name });
     } catch (err: any) {
-      setError(err.message || 'Falha ao autenticar com as credenciais locais.');
+      setError(err.message || 'Falha ao autenticar.');
     } finally {
       setLoading(false);
     }
   };
 
-  const fillQuickCredentials = (adminEmail: string) => {
-    setEmail(adminEmail);
-    setPassword('bma-docente-2026');
-  };
-
   return (
-    <div className="max-w-xl mx-auto my-6 sm:my-10 px-4">
-      <div className="neu-card p-6 sm:p-8 relative overflow-hidden">
+    <div className="max-w-xl mx-auto my-6 sm:my-12 px-4">
+      <div className="neu-card p-6 sm:p-9 relative overflow-hidden">
         
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
@@ -175,7 +222,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) =
             Área do Professor
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
-            Bantu Mentor Academy • Gestão de Livros e Exercícios
+            Bantu Mentor Academy • Gestão Pedagógica de Manuais e Exercícios
           </p>
         </div>
 
@@ -203,11 +250,11 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) =
             }`}
           >
             <Lock className="w-3.5 h-3.5" />
-            <span>Acesso Local Directo</span>
+            <span>Acesso Directo</span>
           </button>
         </div>
 
-        {/* Domain Diagnostic Alert Box (Displayed when auth/unauthorized-domain occurs) */}
+        {/* Domain Diagnostic Alert Box (Displayed only if unauthorized domain is reported by Firebase) */}
         {domainDiagnostic && (
           <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-amber-500/15 border-2 border-amber-500/40 text-slate-900 dark:text-white space-y-3.5">
             <div className="flex items-start gap-3">
@@ -253,22 +300,6 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) =
               </div>
             </div>
 
-            {/* Step-by-step instructions */}
-            <div className="text-xs text-slate-700 dark:text-slate-300 space-y-1.5 pl-1">
-              <div className="font-bold text-slate-900 dark:text-white">Como resolver em 3 passos:</div>
-              <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed">
-                <li>
-                  Abra a secção de configurações na Consola do Firebase.
-                </li>
-                <li>
-                  Vá a <strong>Settings &gt; Authorized domains</strong> (Domínios autorizados).
-                </li>
-                <li>
-                  Clique em <strong>Add domain</strong> (Adicionar domínio) e cole <code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10 font-mono font-bold">{currentHost}</code>.
-                </li>
-              </ol>
-            </div>
-
             {/* Actions: Open Firebase Console or Bypass via Local Mode */}
             <div className="flex flex-col sm:flex-row gap-2 pt-1">
               <a
@@ -286,7 +317,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) =
                 className="flex-1 py-2.5 px-3 rounded-xl btn-teal text-white text-xs font-black shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Lock className="w-3.5 h-3.5" />
-                <span>Entrar no Modo Local Agora</span>
+                <span>Entrar no Modo Directo</span>
               </button>
             </div>
           </div>
@@ -300,13 +331,13 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) =
           </div>
         )}
 
-        {/* General Error notice */}
+        {/* Error message */}
         {error && !domainDiagnostic && (
           <div className="mb-5 p-3.5 rounded-xl bg-red-500/15 border border-red-500/30 flex items-start gap-2.5 text-red-700 dark:text-red-200 text-xs sm:text-sm animate-shake">
             <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
             <div className="flex-1 leading-relaxed">
               <div>{error}</div>
-              {error.includes('não registado') && (
+              {error.includes('não encontradas') && (
                 <button
                   type="button"
                   onClick={handleCreateFirebaseUser}
@@ -314,14 +345,14 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) =
                   className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-400 underline hover:no-underline cursor-pointer"
                 >
                   <UserPlus className="w-3.5 h-3.5" />
-                  <span>Criar este utilizador no Firebase com esta palavra-passe</span>
+                  <span>Criar esta conta no Firebase com esta palavra-passe</span>
                 </button>
               )}
             </div>
           </div>
         )}
 
-        {/* Form fields */}
+        {/* Form fields (Standard clean production inputs, no hardcoded values) */}
         <form onSubmit={authMode === 'firebase' ? handleFirebaseEmailLogin : handleLocalLogin} className="space-y-4 sm:space-y-5">
           <div>
             <label className="block text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
@@ -334,9 +365,10 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) =
               <input
                 type="email"
                 required
+                autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="bantudesignstudio9@gmail.com"
+                placeholder="seu.email@exemplo.com"
                 className="w-full pl-10 pr-4 py-3 rounded-xl neu-inset text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all"
               />
             </div>
@@ -351,13 +383,22 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) =
                 <Lock className="w-4 h-4" />
               </div>
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
-                className="w-full pl-10 pr-4 py-3 rounded-xl neu-inset text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all"
+                className="w-full pl-10 pr-11 py-3 rounded-xl neu-inset text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                title={showPassword ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
@@ -377,7 +418,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) =
             ) : (
               <>
                 <span>
-                  {authMode === 'firebase' ? 'Entrar com Firebase Authentication' : 'Entrar no Modo Directo BMA'}
+                  {authMode === 'firebase' ? 'Entrar com Firebase Authentication' : 'Entrar com Acesso Directo'}
                 </span>
                 <ArrowRight className="w-4 h-4" />
               </>
@@ -402,67 +443,19 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) =
               </svg>
               <span>Continuar com Google (Firebase)</span>
             </button>
-
-            <button
-              type="button"
-              onClick={handleCreateFirebaseUser}
-              disabled={loading}
-              className="w-full py-2 text-center text-xs text-amber-700 dark:text-amber-400 font-bold hover:underline cursor-pointer"
-            >
-              Criar ou registar esta conta no Firebase Authentication
-            </button>
           </div>
         )}
 
-        {/* Quick official credentials card */}
-        <div className="mt-6 pt-5 border-t border-slate-200/80 dark:border-white/10">
-          <div className="text-[11px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider mb-2 flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <KeyRound className="w-3.5 h-3.5" />
-              <span>Credenciais Oficiais BMA:</span>
-            </div>
-            <span className="text-[10px] text-teal-600 dark:text-teal-400 font-mono">
-              Project ID: {firebaseConfig.projectId}
-            </span>
-          </div>
-          <div className="neu-inset p-3 rounded-xl space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5">
-              <span className="text-slate-500 dark:text-slate-400 text-[11px]">Email Oficial:</span>
-              <button
-                type="button"
-                onClick={() => fillQuickCredentials('bantudesignstudio9@gmail.com')}
-                className="font-mono text-amber-700 dark:text-amber-300 hover:underline text-left sm:text-right truncate cursor-pointer"
-              >
-                bantudesignstudio9@gmail.com
-              </button>
-            </div>
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5">
-              <span className="text-slate-500 dark:text-slate-400 text-[11px]">Email Alternativo:</span>
-              <button
-                type="button"
-                onClick={() => fillQuickCredentials('admin@bmabooks.ao')}
-                className="font-mono text-teal-700 dark:text-teal-300 hover:underline text-left sm:text-right cursor-pointer"
-              >
-                admin@bmabooks.ao
-              </button>
-            </div>
-            <div className="flex justify-between items-center pt-1 border-t border-slate-200 dark:border-white/5">
-              <span className="text-slate-500 dark:text-slate-400 text-[11px]">Palavra-passe:</span>
-              <code className="bg-slate-200 dark:bg-white/10 px-1.5 py-0.5 rounded text-amber-800 dark:text-amber-200 font-mono">
-                bma-docente-2026
-              </code>
-            </div>
-          </div>
-          <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 mt-2.5">
-            <span>Servidor com protecção de tentativas</span>
-            <button
-              type="button"
-              onClick={onCancel}
-              className="text-slate-600 dark:text-slate-300 hover:underline cursor-pointer"
-            >
-              Voltar ao Início
-            </button>
-          </div>
+        {/* Clean, professional bottom bar with return button */}
+        <div className="mt-6 pt-5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+          <span className="text-[11px]">Bantu Mentor Academy • Sistema Protegido</span>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 font-medium cursor-pointer transition-colors"
+          >
+            Voltar ao Início
+          </button>
         </div>
 
       </div>

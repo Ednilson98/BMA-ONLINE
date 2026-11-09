@@ -25,7 +25,6 @@ export class StorageService {
 
   constructor() {
     this.loadMetadata();
-    this.ensureSampleBook();
   }
 
   private loadMetadata() {
@@ -33,6 +32,11 @@ export class StorageService {
       try {
         const raw = fs.readFileSync(META_FILE, 'utf-8');
         this.metadata = JSON.parse(raw);
+        // Ensure legacy mock entries are cleaned out
+        if (this.metadata.books && this.metadata.books[SAMPLE_BOOK_ID]) {
+          delete this.metadata.books[SAMPLE_BOOK_ID];
+          this.saveMetadata();
+        }
       } catch (err) {
         console.error('Error reading metadata.json, creating new one:', err);
         this.metadata = { books: {}, customDomain: '' };
@@ -66,25 +70,6 @@ export class StorageService {
       fs.mkdirSync(versionsDir, { recursive: true });
     }
     return dir;
-  }
-
-  public ensureSampleBook() {
-    const sampleHtml = buildSampleBookHtml();
-    if (!this.metadata.books[SAMPLE_BOOK_ID]) {
-      console.log('Seeding official sample book:', SAMPLE_BOOK_ID);
-      this.saveBookUpload(
-        SAMPLE_BOOK_META,
-        SAMPLE_EXERCISES,
-        sampleHtml,
-        [],
-        'Versão inicial de demonstração (17 exercícios oficiais)',
-        'keep-missing'
-      );
-    } else {
-      // Refresh current.html with latest responsive & dual-theme styling
-      const currentPath = path.join(this.getBookDir(SAMPLE_BOOK_ID), 'current.html');
-      fs.writeFileSync(currentPath, sampleHtml, 'utf-8');
-    }
   }
 
   public getBooks(): BookRecord[] {
