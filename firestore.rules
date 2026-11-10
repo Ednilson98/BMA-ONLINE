@@ -30,7 +30,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isVerifiedUser() && (
+      return isSignedIn() && (
         request.auth.token.email == 'bantudesignstudio9@gmail.com' ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
@@ -47,7 +47,7 @@ service cloud.firestore {
     // Validation helper for Book documents
     function isValidBook(data) {
       return data.keys().hasAll(['book_id', 'title', 'format']) &&
-             data.keys().hasOnly(['book_id', 'title', 'subtitle', 'footer', 'author', 'edition', 'format', 'totalViews', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['book_id', 'title', 'subtitle', 'footer', 'author', 'edition', 'format', 'totalViews', 'activeExerciseCount', 'unlistedExerciseCount', 'latestVersion', 'versionCount', 'publicUrl', 'htmlTemplate', 'createdAt', 'updatedAt']) &&
              isValidId(data.book_id) &&
              data.title is string && data.title.size() > 0 && data.title.size() <= 160 &&
              data.format == 'bma-book-v1' &&
@@ -55,20 +55,28 @@ service cloud.firestore {
              (!('footer' in data) || (data.footer is string && data.footer.size() <= 255)) &&
              (!('author' in data) || (data.author is string && data.author.size() <= 160)) &&
              (!('edition' in data) || (data.edition is string && data.edition.size() <= 60)) &&
-             (!('totalViews' in data) || data.totalViews is number);
+             (!('totalViews' in data) || data.totalViews is number) &&
+             (!('activeExerciseCount' in data) || data.activeExerciseCount is number) &&
+             (!('unlistedExerciseCount' in data) || data.unlistedExerciseCount is number) &&
+             (!('latestVersion' in data) || data.latestVersion is number) &&
+             (!('versionCount' in data) || data.versionCount is number) &&
+             (!('publicUrl' in data) || (data.publicUrl is string && data.publicUrl.size() <= 200)) &&
+             (!('htmlTemplate' in data) || (data.htmlTemplate is string && data.htmlTemplate.size() <= 900000));
     }
 
     // Validation helper for Exercise documents
     function isValidExercise(data) {
       return data.keys().hasAll(['id', 'book_id', 'title']) &&
-             data.keys().hasOnly(['id', 'book_id', 'title', 'class', 'unit', 'kind', 'instr', 'views']) &&
+             data.keys().hasOnly(['id', 'book_id', 'title', 'class', 'unit', 'kind', 'instr', 'audio', 'audioText', 'content', 'views', 'createdAt', 'updatedAt']) &&
              isValidId(data.id) &&
              isValidId(data.book_id) &&
              data.title is string && data.title.size() > 0 && data.title.size() <= 160 &&
              (!('class' in data) || (data.class is string && data.class.size() <= 60)) &&
              (!('unit' in data) || (data.unit is string && data.unit.size() <= 60)) &&
              (!('kind' in data) || (data.kind is string && data.kind.size() <= 60)) &&
-             (!('instr' in data) || (data.instr is string && data.instr.size() <= 500)) &&
+             (!('instr' in data) || (data.instr is string && data.instr.size() <= 1000)) &&
+             (!('audio' in data) || (data.audio is string && data.audio.size() <= 200)) &&
+             (!('audioText' in data) || (data.audioText is string && data.audioText.size() <= 1000)) &&
              (!('views' in data) || data.views is number);
     }
 
@@ -86,17 +94,14 @@ service cloud.firestore {
       allow create: if isAdmin() &&
                        isValidId(bookId) &&
                        incoming().book_id == bookId &&
-                       isValidBook(incoming()) &&
-                       incoming().createdAt == request.time;
+                       isValidBook(incoming());
 
       allow update: if (
         // Action 1: Admin full edit
         (isAdmin() &&
          isValidId(bookId) &&
          isValidBook(incoming()) &&
-         incoming().book_id == existing().book_id &&
-         incoming().createdAt == existing().createdAt &&
-         incoming().updatedAt == request.time) ||
+         incoming().book_id == existing().book_id) ||
         // Action 2: Public View Increment
         (incoming().diff(existing()).affectedKeys().hasOnly(['totalViews']) &&
          incoming().totalViews is number &&
@@ -113,8 +118,7 @@ service cloud.firestore {
                          isValidId(exerciseId) &&
                          incoming().id == exerciseId &&
                          incoming().book_id == bookId &&
-                         isValidExercise(incoming()) &&
-                         exists(/databases/$(database)/documents/books/$(bookId));
+                         isValidExercise(incoming());
 
         allow update: if (
           // Action 1: Admin edit

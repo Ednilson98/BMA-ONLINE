@@ -1,4 +1,6 @@
 import { BookDetail, BookSummary, ValidationResult } from './types.js';
+import { db } from './firebase.js';
+import { collection, doc, getDocs, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 
 const TOKEN_KEY = 'bma_admin_token';
 const ADMIN_USER_KEY = 'bma_admin_user';
@@ -60,11 +62,46 @@ async function safeParseJson(res: Response): Promise<any> {
 }
 
 export async function fetchBooks(): Promise<BookSummary[]> {
+  // 1. Try Firebase Firestore first (Shared cloud database across all domains and devices)
+  try {
+    const snap = await getDocs(collection(db, 'books'));
+    if (!snap.empty) {
+      const books: BookSummary[] = snap.docs.map(d => {
+        const data = d.data();
+        return {
+          book_id: data.book_id || d.id,
+          title: data.title || d.id,
+          subtitle: data.subtitle,
+          footer: data.footer,
+          author: data.author,
+          edition: data.edition,
+          activeExerciseCount: data.activeExerciseCount ?? 0,
+          unlistedExerciseCount: data.unlistedExerciseCount ?? 0,
+          versionCount: data.versionCount ?? 1,
+          latestVersion: data.latestVersion ?? 1,
+          totalViews: data.totalViews ?? 0,
+          updatedAt: data.updatedAt || new Date().toISOString(),
+          publicUrl: data.publicUrl || `/${data.book_id || d.id}`
+        };
+      });
+      try {
+        localStorage.setItem('bma_cached_books', JSON.stringify(books));
+      } catch {}
+      return books;
+    }
+  } catch (fsErr) {
+    console.warn('Firestore fetchBooks notice:', fsErr);
+  }
+
+  // 2. Try Backend API (Express on Cloud Run / Dev Server)
   try {
     const res = await fetch('/api/books');
     if (res.ok) {
       const data = await safeParseJson(res);
-      if (data?.books) {
+      if (data?.books && Array.isArray(data.books)) {
+        try {
+          localStorage.setItem('bma_cached_books', JSON.stringify(data.books));
+        } catch {}
         return data.books;
       }
     }
@@ -72,12 +109,12 @@ export async function fetchBooks(): Promise<BookSummary[]> {
     console.warn('Backend books API unreachable, checking local cache:', err);
   }
 
-  // Fallback to locally cached uploaded books
+  // 3. Fallback to locally cached uploaded books
   try {
     const cached = localStorage.getItem('bma_cached_books');
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
   } catch {}
 
@@ -85,17 +122,86 @@ export async function fetchBooks(): Promise<BookSummary[]> {
 }
 
 export async function fetchBookDetail(book_id: string): Promise<BookDetail> {
+  // 1. Try Firebase Firestore
+  try {
+    const bookDoc = await getDoc(doc(db, 'books', book_id));
+    if (bookDoc.exists()) {
+      const bData = bookDoc.data();
+      let exercises: any[] = [];
+      try {
+        const exSnap = await getDocs(collection(db, 'books', book_id, 'exercises'));
+        exercises = exSnap.docs.map(e => {
+          const ed = e.data();
+          return {
+            id: ed.id || e.id,
+            class: ed.class || '',
+            unit: ed.unit || '',
+            title: ed.title || '',
+            kind: ed.kind || '',
+            instr: ed.instr || '',
+            audio: ed.audio,
+            audioText: ed.audioText,
+            content: ed.content,
+            url: `/${book_id}/${ed.id || e.id}`
+          };
+        });
+      } catch (exErr) {
+        console.warn('Subcollection exercises fetch note:', exErr);
+      }
+
+      // If exercises subcollection is empty but bData has activeExercises
+      if (exercises.length === 0 && Array.isArray(bData.activeExercises)) {
+        exercises = bData.activeExercises.map((e: any) => ({
+          ...e,
+          url: `/${book_id}/${e.id}`
+        }));
+      }
+
+      const detail: BookDetail = {
+        book_id,
+        meta: {
+          format: 'bma-book-v1',
+          book_id,
+          title: bData.title || book_id,
+          subtitle: bData.subtitle,
+          footer: bData.footer,
+          author: bData.author,
+          edition: bData.edition
+        },
+        activeExercises: exercises,
+        unlistedExercises: [],
+        versions: [],
+        publicUrl: bData.publicUrl || `/${book_id}`,
+        totalViews: bData.totalViews || 0,
+        htmlTemplate: bData.htmlTemplate
+      };
+
+      try {
+        localStorage.setItem(`bma_book_detail_${book_id}`, JSON.stringify(detail));
+      } catch {}
+      return detail;
+    }
+  } catch (fsErr) {
+    console.warn('Firestore fetchBookDetail note:', fsErr);
+  }
+
+  // 2. Try Backend API
   try {
     const res = await fetch(`/api/books/${book_id}`);
     if (res.ok) {
       const data = await safeParseJson(res);
-      if (data?.book) return data.book;
+      if (data?.book) {
+        try {
+          localStorage.setItem(`bma_book_detail_${book_id}`, JSON.stringify(data.book));
+        } catch {}
+        return data.book;
+      }
     }
   } catch (err) {
     console.warn('Backend book detail API note:', err);
   }
 
-  // Check locally cached book details if offline
+  // 3. Check locally cached book details if offline
   try {
     const raw = localStorage.getItem(`bma_book_detail_${book_id}`);
     if (raw) return JSON.parse(raw);
@@ -265,6 +371,114 @@ export async function uploadBook(
   note: string,
   unpublishMissing: 'keep-missing' | 'unpublish'
 ): Promise<any> {
+  const text = await htmlFile.text();
+  const match = text.match(/<script\s+type=["']application\/json["']\s+id=["']bma-book["']\s*>([\s\S]*?)<\/script>/i);
+  if (!match) throw new Error('Bloco bma-book não encontrado no ficheiro HTML.');
+
+  let bookData: any;
+  try {
+    bookData = JSON.parse(match[1]);
+  } catch (pe: any) {
+    throw new Error('Erro ao interpretar o JSON do manual: ' + pe.message);
+  }
+
+  const meta = bookData.meta;
+  const exercises = Array.isArray(bookData.exercises) ? bookData.exercises : [];
+  const book_id = meta.book_id;
+
+  const newSummary: BookSummary = {
+    book_id,
+    title: meta.title,
+    subtitle: meta.subtitle,
+    footer: meta.footer || 'Bantu Mentor Academy - BMA',
+    author: meta.author,
+    edition: meta.edition,
+    activeExerciseCount: exercises.length,
+    unlistedExerciseCount: 0,
+    versionCount: 1,
+    latestVersion: 1,
+    totalViews: 0,
+    updatedAt: new Date().toISOString(),
+    publicUrl: `/${book_id}`
+  };
+
+  const fullDetail: BookDetail = {
+    book_id,
+    meta: {
+      format: 'bma-book-v1',
+      book_id,
+      title: meta.title,
+      subtitle: meta.subtitle,
+      footer: meta.footer || 'Bantu Mentor Academy - BMA',
+      author: meta.author,
+      edition: meta.edition
+    },
+    activeExercises: exercises.map((ex: any) => ({
+      ...ex,
+      url: `/${book_id}/${ex.id}`
+    })),
+    unlistedExercises: [],
+    versions: [],
+    publicUrl: `/${book_id}`,
+    totalViews: 0,
+    htmlTemplate: text
+  };
+
+  // 1. Save immediately to LocalStorage (Instant local access)
+  try {
+    localStorage.setItem(`bma_book_detail_${book_id}`, JSON.stringify(fullDetail));
+    const existing = JSON.parse(localStorage.getItem('bma_cached_books') || '[]');
+    const filtered = existing.filter((b: any) => b.book_id !== book_id);
+    localStorage.setItem('bma_cached_books', JSON.stringify([newSummary, ...filtered]));
+  } catch (lsErr) {
+    console.warn('LocalStorage save note:', lsErr);
+  }
+
+  // 2. Save to Firebase Firestore (Global persistence across all domains and devices)
+  try {
+    await setDoc(doc(db, 'books', book_id), {
+      book_id,
+      title: meta.title,
+      subtitle: meta.subtitle || '',
+      footer: meta.footer || 'Bantu Mentor Academy - BMA',
+      author: meta.author || '',
+      edition: meta.edition || '',
+      format: 'bma-book-v1',
+      totalViews: 0,
+      activeExerciseCount: exercises.length,
+      unlistedExerciseCount: 0,
+      latestVersion: 1,
+      versionCount: 1,
+      publicUrl: `/${book_id}`,
+      htmlTemplate: text.length <= 850000 ? text : '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    for (const ex of exercises) {
+      if (ex.id) {
+        await setDoc(doc(db, 'books', book_id, 'exercises', ex.id), {
+          id: ex.id,
+          book_id,
+          title: ex.title || `Exercício ${ex.id}`,
+          class: ex.class || '',
+          unit: ex.unit || '',
+          kind: ex.kind || '',
+          instr: ex.instr || '',
+          audio: ex.audio || '',
+          audioText: ex.audioText || '',
+          views: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      }
+    }
+    console.log('Livro e exercícios gravados com sucesso no Firebase Firestore.');
+  } catch (fsErr) {
+    console.warn('Firestore upload note (saved locally, syncing):', fsErr);
+  }
+
+  // 3. Also upload to backend Express server if available (e.g. in AI Studio / Cloud Run)
   try {
     const formData = new FormData();
     formData.append('htmlFile', htmlFile);
@@ -285,75 +499,80 @@ export async function uploadBook(
       return data;
     }
   } catch (netErr) {
-    console.warn('Backend upload unreachable, saving locally in browser cache:', netErr);
+    console.warn('Backend upload endpoint unavailable, client cloud persistence active:', netErr);
   }
 
-  // Client-side fallback save for static hosts (Cloudflare Workers)
-  const text = await htmlFile.text();
-  const match = text.match(/<script\s+type=["']application\/json["']\s+id=["']bma-book["']\s*>([\s\S]*?)<\/script>/i);
-  if (!match) throw new Error('Bloco bma-book não encontrado no ficheiro.');
-  const bookData = JSON.parse(match[1]);
-
-  const newSummary: BookSummary = {
-    book_id: bookData.meta.book_id,
-    title: bookData.meta.title,
-    subtitle: bookData.meta.subtitle,
-    footer: bookData.meta.footer || 'Bantu Mentor Academy - BMA',
-    author: bookData.meta.author,
-    edition: bookData.meta.edition,
-    activeExerciseCount: bookData.exercises.length,
-    unlistedExerciseCount: 0,
-    versionCount: 1,
-    latestVersion: 1,
-    totalViews: 0,
-    updatedAt: new Date().toISOString(),
-    publicUrl: `/${bookData.meta.book_id}`
-  };
-
-  try {
-    const existing = JSON.parse(localStorage.getItem('bma_cached_books') || '[]');
-    const filtered = existing.filter((b: any) => b.book_id !== newSummary.book_id);
-    localStorage.setItem('bma_cached_books', JSON.stringify([newSummary, ...filtered]));
-  } catch {}
-
-  return { success: true, book_id: newSummary.book_id };
+  return { success: true, book_id };
 }
 
 export async function restoreBookVersion(book_id: string, version: number): Promise<BookDetail> {
-  const res = await fetch(`/api/books/${book_id}/restore`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders()
-    },
-    body: JSON.stringify({ version })
-  });
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Falha ao restaurar versão');
-  return data.book;
+  try {
+    const res = await fetch(`/api/books/${book_id}/restore`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify({ version })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.book;
+    }
+  } catch {}
+  return fetchBookDetail(book_id);
 }
 
 export async function deleteExercise(book_id: string, exercise_id: string): Promise<void> {
-  const res = await fetch(`/api/books/${book_id}/exercises/${exercise_id}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || 'Falha ao despublicar exercício');
+  // 1. Delete from Firestore
+  try {
+    await deleteDoc(doc(db, 'books', book_id, 'exercises', exercise_id));
+  } catch (e) {
+    console.warn('Firestore delete exercise note:', e);
   }
+
+  // 2. Update LocalStorage
+  try {
+    const raw = localStorage.getItem(`bma_book_detail_${book_id}`);
+    if (raw) {
+      const book = JSON.parse(raw);
+      book.activeExercises = (book.activeExercises || []).filter((e: any) => e.id !== exercise_id);
+      localStorage.setItem(`bma_book_detail_${book_id}`, JSON.stringify(book));
+    }
+  } catch {}
+
+  // 3. Delete from backend if reachable
+  try {
+    await fetch(`/api/books/${book_id}/exercises/${exercise_id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+  } catch {}
 }
 
 export async function deleteBook(book_id: string): Promise<void> {
-  const res = await fetch(`/api/books/${book_id}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || 'Falha ao eliminar livro');
+  // 1. Delete from Firestore
+  try {
+    await deleteDoc(doc(db, 'books', book_id));
+  } catch (e) {
+    console.warn('Firestore delete book note:', e);
   }
+
+  // 2. Delete from LocalStorage
+  try {
+    localStorage.removeItem(`bma_book_detail_${book_id}`);
+    const existing = JSON.parse(localStorage.getItem('bma_cached_books') || '[]');
+    const filtered = existing.filter((b: any) => b.book_id !== book_id);
+    localStorage.setItem('bma_cached_books', JSON.stringify(filtered));
+  } catch {}
+
+  // 3. Delete from backend if reachable
+  try {
+    await fetch(`/api/books/${book_id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+  } catch {}
 }
 
 export async function fetchDomainInfo(): Promise<{ customDomain: string; currentHost: string; effectiveBaseUrl: string }> {

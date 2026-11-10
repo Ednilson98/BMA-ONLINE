@@ -5,7 +5,7 @@ import { PublicHome } from './components/PublicHome.js';
 import { AdminLogin } from './components/AdminLogin.js';
 import { AdminDashboard } from './components/AdminDashboard.js';
 import { BookDetailView } from './components/BookDetailView.js';
-import { checkAuth, getStoredAdminUser } from './api.js';
+import { checkAuth, getStoredAdminUser, fetchBookDetail } from './api.js';
 
 export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -14,7 +14,7 @@ export default function App() {
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
-  // Initialize theme and verify auth on mount
+  // Initialize theme, verify auth, and handle deep exercise/book links on mount
   useEffect(() => {
     const savedTheme = (localStorage.getItem('bma_theme') as 'dark' | 'light') || 'dark';
     setTheme(savedTheme);
@@ -31,8 +31,36 @@ export default function App() {
       }
     });
 
+    const path = window.location.pathname.replace(/^\/|\/$/g, '');
+    const segments = path.split('/').filter(Boolean);
+    const reservedRoutes = ['admin', 'api', 'login', 'assets', 'src'];
+
     if (window.location.pathname.startsWith('/admin') || window.location.hash === '#admin') {
       setCurrentView('admin-dashboard');
+    } else if (segments.length === 2 && !reservedRoutes.includes(segments[0])) {
+      // Direct QR Code exercise link on static hosts (e.g. /ingles-7-8/u71-l1)
+      const [bookId, exerciseId] = segments;
+      fetchBookDetail(bookId).then(book => {
+        const exercise = book.activeExercises.find(e => e.id === exerciseId);
+        if (exercise && book.htmlTemplate) {
+          const match = book.htmlTemplate.match(/(<script\b[^>]*\bid=["']bma-book["'][^>]*>)([\s\S]*?)(<\/script>)/i);
+          if (match) {
+            const payload = { meta: book.meta, exercises: [exercise] };
+            const jsonString = JSON.stringify(payload, null, 2).replace(/<\//g, '<\\/');
+            const prefix = book.htmlTemplate.substring(0, match.index! + match[1].length);
+            const suffix = book.htmlTemplate.substring(match.index! + match[1].length + match[2].length);
+            const standaloneHtml = `${prefix}\n${jsonString}\n${suffix}`;
+            document.open();
+            document.write(standaloneHtml);
+            document.close();
+          }
+        }
+      }).catch(err => {
+        console.warn('Exercise link loading notice:', err);
+      });
+    } else if (segments.length === 1 && !reservedRoutes.includes(segments[0])) {
+      // Direct book link on static hosts (e.g. /ingles-7-8)
+      setSelectedBookId(segments[0]);
     }
   }, []);
 

@@ -32,11 +32,6 @@ export class StorageService {
       try {
         const raw = fs.readFileSync(META_FILE, 'utf-8');
         this.metadata = JSON.parse(raw);
-        // Ensure legacy mock entries are cleaned out
-        if (this.metadata.books && this.metadata.books[SAMPLE_BOOK_ID]) {
-          delete this.metadata.books[SAMPLE_BOOK_ID];
-          this.saveMetadata();
-        }
       } catch (err) {
         console.error('Error reading metadata.json, creating new one:', err);
         this.metadata = { books: {}, customDomain: '' };

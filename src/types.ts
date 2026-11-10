@@ -53,11 +53,12 @@ export interface BookDetail {
   activeExercises: Exercise[];
   unlistedExercises: Exercise[];
   versions: BookVersion[];
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
   totalViews: number;
-  audioFiles: string[];
+  audioFiles?: string[];
   publicUrl: string;
+  htmlTemplate?: string;
 }
 
 export interface ValidationResult {

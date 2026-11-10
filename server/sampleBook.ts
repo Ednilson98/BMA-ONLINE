@@ -4,12 +4,12 @@
  * Contains exactly 17 exercises for testing all acceptance criteria.
  */
 
-export const SAMPLE_BOOK_ID = 'ingles-7-8';
+export const SAMPLE_BOOK_ID = 'modelo-manual-bma';
 
 export const SAMPLE_BOOK_META = {
   format: 'bma-book-v1' as const,
-  book_id: 'ingles-7-8',
-  title: 'Inglês 7ª & 8ª Classe',
+  book_id: 'modelo-manual-bma',
+  title: 'Modelo Didáctico - Língua Inglesa',
   subtitle: 'Ensino Secundário Geral • República de Angola',
   footer: 'Bantu Mentor Academy - BMA • Luanda, Angola',
   author: 'Departamento de Línguas e Pedagogia BMA',

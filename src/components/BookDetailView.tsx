@@ -234,7 +234,7 @@ export const BookDetailView: React.FC<BookDetailViewProps> = ({
               <span className="text-xs bg-teal-500/15 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-500/30 px-3 py-1 rounded-full font-bold">
                 Versão {book.versions[0]?.version || 1}
               </span>
-              {book.audioFiles.length > 0 && (
+              {book.audioFiles && book.audioFiles.length > 0 && (
                 <span className="text-xs bg-cyan-500/15 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 px-3 py-1 rounded-full font-bold flex items-center gap-1">
                   <Volume2 className="w-3.5 h-3.5" />
                   <span>{book.audioFiles.length} áudios MP3</span>

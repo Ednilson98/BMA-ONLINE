@@ -73,6 +73,32 @@
           "type": "number",
           "description": "Total cumulative QR scan count."
         },
+        "activeExerciseCount": {
+          "type": "number",
+          "description": "Count of published exercises."
+        },
+        "unlistedExerciseCount": {
+          "type": "number",
+          "description": "Count of unlisted exercises."
+        },
+        "latestVersion": {
+          "type": "number",
+          "description": "Current version number."
+        },
+        "versionCount": {
+          "type": "number",
+          "description": "Total historical versions count."
+        },
+        "publicUrl": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Relative URL path to the book."
+        },
+        "htmlTemplate": {
+          "type": "string",
+          "maxLength": 900000,
+          "description": "Shared HTML player document shell."
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time",
@@ -125,8 +151,18 @@
         },
         "instr": {
           "type": "string",
-          "maxLength": 500,
+          "maxLength": 1000,
           "description": "Pedagogical instruction."
+        },
+        "audio": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Relative path to audio MP3 asset."
+        },
+        "audioText": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "English transcript for speech synthesis."
         },
         "views": {
           "type": "number",
